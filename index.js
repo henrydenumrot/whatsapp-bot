@@ -2,7 +2,11 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// Este endpoint verifica el webhook con Meta
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = "591125814080826"; // reemplaza esto
+const VERSION = "v18.0";
+
+// Verificación del webhook
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
@@ -16,11 +20,41 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-// Este endpoint recibe los mensajes de WhatsApp
+// Recibir mensajes
 app.post("/webhook", (req, res) => {
   const body = req.body;
   console.log("📩 Mensaje recibido:", JSON.stringify(body, null, 2));
   res.sendStatus(200);
+});
+
+// Enviar mensaje con plantilla
+app.get("/enviar", async (req, res) => {
+  const numero = req.query.numero; // ej: 573001234567
+  const plantilla = req.query.plantilla; // nombre de tu plantilla
+
+  const response = await fetch(
+    `https://graph.facebook.com/${VERSION}/${PHONE_NUMBER_ID}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${WHATSAPP_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: numero,
+        type: "template",
+        template: {
+          name: plantilla,
+          language: { code: "es" }
+        }
+      })
+    }
+  );
+
+  const data = await response.json();
+  console.log("📤 Respuesta:", JSON.stringify(data, null, 2));
+  res.json(data);
 });
 
 app.listen(3000, () => {
