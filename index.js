@@ -3,7 +3,7 @@ const app = express();
 app.use(express.json());
 
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-const PHONE_NUMBER_ID = "591125814080826"; // reemplaza esto
+const PHONE_NUMBER_ID = "591125814080826";
 const VERSION = "v18.0";
 
 // Verificación del webhook
@@ -29,8 +29,9 @@ app.post("/webhook", (req, res) => {
 
 // Enviar mensaje con plantilla
 app.get("/enviar", async (req, res) => {
-  const numero = req.query.numero; // ej: 573001234567
-  const plantilla = req.query.plantilla; // nombre de tu plantilla
+  const numero = req.query.numero;
+  const plantilla = req.query.plantilla;
+  const nombre = req.query.nombre || "Cliente";
 
   const response = await fetch(
     `https://graph.facebook.com/${VERSION}/${PHONE_NUMBER_ID}/messages`,
@@ -46,7 +47,18 @@ app.get("/enviar", async (req, res) => {
         type: "template",
         template: {
           name: plantilla,
-          language: { code: "es" }
+          language: { code: "es_ES" },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                {
+                  type: "text",
+                  text: nombre
+                }
+              ]
+            }
+          ]
         }
       })
     }
