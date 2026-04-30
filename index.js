@@ -1,4 +1,5 @@
 const express = require("express");
+const https = require("https");
 const app = express();
 app.use(express.json());
 
@@ -20,10 +21,46 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-// Recibir mensajes
+// Recibir mensajes y botones
 app.post("/webhook", (req, res) => {
   const body = req.body;
-  console.log("📩 Mensaje recibido:", JSON.stringify(body, null, 2));
+  console.log("📩 JSON completo recibido:", JSON.stringify(body, null, 2));
+
+  try {
+    const entry = body.entry?.[0];
+    const changes = entry?.changes?.[0];
+    const messages = changes?.value?.messages;
+
+    if (messages && messages.length > 0) {
+      const message = messages[0];
+      const from = message.from;
+      const type = message.type;
+
+      console.log(`📱 Mensaje de: ${from}`);
+      console.log(`📌 Tipo: ${type}`);
+
+      // Si es respuesta de botón
+      if (type === "button") {
+        const buttonText = message.button.text;
+        console.log(`🔘 Botón presionado: ${buttonText}`);
+
+        if (buttonText === "ACEPTO") {
+          console.log("✅ Usuario ACEPTÓ");
+          // Aquí enviaremos la segunda plantilla
+        } else if (buttonText === "NO ACEPTO") {
+          console.log("❌ Usuario NO ACEPTÓ");
+        }
+      }
+
+      // Si es mensaje de texto normal
+      if (type === "text") {
+        console.log(`💬 Texto: ${message.text.body}`);
+      }
+    }
+  } catch (err) {
+    console.error("Error procesando mensaje:", err.message);
+  }
+
   res.sendStatus(200);
 });
 
@@ -32,6 +69,7 @@ app.get("/enviar", async (req, res) => {
   const numero = req.query.numero;
   const plantilla = req.query.plantilla;
   const nombre = req.query.nombre || "Cliente";
+  const empresa = req.query.empresa || "Empresa";
 
   const response = await fetch(
     `https://graph.facebook.com/${VERSION}/${PHONE_NUMBER_ID}/messages`,
@@ -47,15 +85,13 @@ app.get("/enviar", async (req, res) => {
         type: "template",
         template: {
           name: plantilla,
-          language: { code: "es_ES" },
+          language: { code: "es_CO" },
           components: [
             {
               type: "body",
               parameters: [
-                {
-                  type: "text",
-                  text: nombre
-                }
+                { type: "text", text: nombre },
+                { type: "text", text: empresa }
               ]
             }
           ]
@@ -65,18 +101,19 @@ app.get("/enviar", async (req, res) => {
   );
 
   const data = await response.json();
-  console.log("📤 Respuesta:", JSON.stringify(data, null, 2));
+  console.log("📤 Mensaje enviado:", JSON.stringify(data, null, 2));
   res.json(data);
 });
-// Evitar que el servidor se duerma
-const https = require("https");
+
+// Keep alive
 setInterval(() => {
   https.get("https://whatsapp-bot-nvwq.onrender.com/webhook", (res) => {
     console.log("🔄 Servidor activo:", res.statusCode);
   }).on("error", (err) => {
     console.error("Error keep-alive:", err.message);
   });
-}, 600000); // cada 10 minutos
+}, 600000);
+
 app.listen(3000, () => {
   console.log("🚀 Servidor corriendo en puerto 3000");
 });
