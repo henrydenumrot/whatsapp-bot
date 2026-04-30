@@ -68,7 +68,15 @@ app.get("/enviar", async (req, res) => {
   console.log("📤 Respuesta:", JSON.stringify(data, null, 2));
   res.json(data);
 });
-
+// Evitar que el servidor se duerma
+const https = require("https");
+setInterval(() => {
+  https.get("https://whatsapp-bot-nvwq.onrender.com/webhook", (res) => {
+    console.log("🔄 Servidor activo:", res.statusCode);
+  }).on("error", (err) => {
+    console.error("Error keep-alive:", err.message);
+  });
+}, 600000); // cada 10 minutos
 app.listen(3000, () => {
   console.log("🚀 Servidor corriendo en puerto 3000");
 });
